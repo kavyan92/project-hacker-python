@@ -11,15 +11,6 @@ app = Flask(__name__)
 db = SQLAlchemy()
 
 
-def connect_to_db(app):
-    """Connect the database to our Flask app."""
-
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///hackbright'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db.app = app
-    db.init_app(app)
-
-
 def get_student_by_github(github):
     """Given a GitHub account name, print info about the matching student."""
 
@@ -33,22 +24,45 @@ def get_student_by_github(github):
 
     row = db_cursor.fetchone()
 
-    print("Student: {} {}\nGitHub account: {}".format(row[0], row[1], row[2]))
+    print(f"Student: {row[0]} {row[1]}\nGitHub account: {row[2]}")
 
 
 def make_new_student(first_name, last_name, github):
     """Add a new student and print confirmation.
 
     Given a first name, last name, and GitHub account, add student to the
-    database and print a confirmation message.
-    """
-    pass
+    database and print a confirmation message."""
+    
+    QUERY = """
+        INSERT INTO students (first_name, last_name, github)
+            VALUES (:first_name, :last_name, :github)
+            """
+    
+    db.session.execute(QUERY, {'first_name': first_name,
+                                'last_name': last_name,
+                                'github': github})
+    
+    db.session.commit()
+
+    print(f"Successfully added student:{first_name} {last_name}")
 
 
 def get_project_by_title(title):
     """Given a project title, print information about the project."""
-    pass
+    QUERY = """
+        SELECT title, description, max_grade FROM projects
+        WHERE title = :title, description = :description, max_grade = :max_grade
+        """
 
+    db_cursor = db.session.execute(QUERY, {'title': title,
+                                           'description': description,
+                                           'max_grade': max_grade})
+
+    db.session.commit()
+
+    row = db_cursor.fetchone()
+
+    print(f'project: {row[0]}, description: {row[1]}, max_grade is: {row[2]}')
 
 def get_grade_by_github_title(github, title):
     """Print grade student received for a project."""
@@ -86,6 +100,14 @@ def handle_input():
         else:
             if command != "quit":
                 print("Invalid Entry. Try again.")
+
+def connect_to_db(app):
+    """Connect the database to our Flask app."""
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///hackbright'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.app = app
+    db.init_app(app)
 
 
 if __name__ == "__main__":
